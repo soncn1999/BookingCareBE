@@ -38,7 +38,7 @@
                             <td><%= dataTable[i].password %></td>
                             <td>
                                 <a href="/edit-crud?id=<%= dataTable[i].id %>" type="button" class="btn btn-success">Edit</a>
-                                <a href="" type="button" class="btn btn-warning">Delete</a>
+                                <a href="/delete-crud?id=<%= dataTable[i].id %>" type="button" class="btn btn-warning">Delete</a>
                             </td>
                         </tr>
                     <% } %>
