@@ -5,9 +5,6 @@ import CRUDService from '../services/CRUDService';
 let getHomepage = async (req, res) => {
     try {
         let data = await db.User.findAll();
-        console.log("================================================");
-        console.log(data);
-        console.log("================================================");
         return res.render('homepage.ejs', {
             data: JSON.stringify(data)
         });
@@ -30,10 +27,29 @@ let displayGetCRUD = async (req, res) => {
     });
 }
 
+let getEditCRUD = async (req, res) => {
+    let userId = req.query.id;
+    console.log(req.query.id);
+    if(userId) {
+        let userData = await CRUDService.getUserInfoById(userId);
+        res.render('editCRUD.ejs', {
+            userData: userData
+        });
+    } else {
+        res.send('Del co cai id nay!');
+    }
+}
+
+let putCRUD = async (req, res) => {
+    let data = req.body;
+    let allUsers = await CRUDService.updateUserData(data);
+    return res.render('displayCRUD.ejs', {
+        dataTable: allUsers
+    });
+}
+
 let postCRUD = async (req, res) => {
     let message = await CRUDService.createNewUser(req.body);
-    // console.log(req.body);
-    console.log(message);
     return res.send('post CRUD from server');
 }
 
@@ -42,4 +58,6 @@ module.exports = {
     getCRUD: getCRUD,
     postCRUD: postCRUD,
     displayGetCRUD: displayGetCRUD,
+    getEditCRUD: getEditCRUD,
+    putCRUD: putCRUD,
 }
