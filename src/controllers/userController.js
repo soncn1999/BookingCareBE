@@ -42,8 +42,7 @@ let handleGetAllUsers = async (req, res) => {
 }
 
 let handleCreateNewUser = async (req, res) => {
-    console.log(req.body);
-    let message = await userService.createNewUser(req.body);
+    let message = await userService.createNewUser(req.body.user);
     console.log(message);
     return res.status(200).json(message);
 }
@@ -56,14 +55,15 @@ let handleEditUser = async (req, res) => {
 }
 
 let handleDeleteUser = async (req, res) => {
-    if(!req.body.id) {
+
+    if(!req.query.id) {
         return res.status(200).json({
             errCode: 1,
             message: 'User not found',
         })
     }
 
-    let message = await userService.deleteUser(req.body.id);
+    let message = await userService.deleteUser(req.query.id);
 
     return res.status(200).json(message);
 }

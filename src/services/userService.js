@@ -98,25 +98,25 @@ let createNewUser = (data) => {
                     errCode: 1,
                     message: 'Email already in use, plz try again later',
                 });
+            } else {
+                let hashPasswordFromBcrypt = await hashUserPassword(data.password);
+
+                await db.User.create({
+                    email: data.email,
+                    password: hashPasswordFromBcrypt,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    address: data.address,
+                    gender: data.gender === '1' ? true : false,
+                    roleId: data.roleId,
+                    phonenumber: data.phonenumber,
+                });
+
+                resolve({
+                    errCode: 0,
+                    message: 'OK',
+                });
             }
-
-            let hashPasswordFromBcrypt = await hashUserPassword(data.password);
-
-            await db.User.create({
-                email: data.email,
-                password: hashPasswordFromBcrypt,
-                firstName: data.firstName,
-                lastName: data.lastName,
-                address: data.address,
-                gender: data.gender === '1' ? true : false,
-                roleId: data.roleId,
-                phonenumber: data.phonenumber,
-            });
-
-            resolve({
-                errCode: 0,
-                message: 'OK',
-            });
         } catch (errors) {
             reject(errors);
         }
@@ -143,10 +143,10 @@ let updateUser = (data) => {
     return new Promise(async (resolve, reject) => {
         try {
             let user = await db.User.findOne({
-                where: {id: data.id},
+                where: { id: data.id },
             });
-            
-            if(!user) {
+
+            if (!user) {
                 resolve({
                     errCode: 2,
                     message: 'User not found, update is rejected',
