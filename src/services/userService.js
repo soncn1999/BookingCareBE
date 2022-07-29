@@ -194,6 +194,31 @@ let deleteUser = (id) => {
     });
 };
 
+let getAllCodeServices = (typeInput) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!typeInput) {
+                resolve({
+                    errCode: 1,
+                    message: 'Missing Require Parameter',
+                });
+            } else {
+                let res = {};
+                let allCodes = await db.Allcode.findAll(
+                    { where: { type: typeInput } }
+                );
+                res.errCode = 0;
+                res.message = 'OK';
+                res.data = allCodes;
+                resolve(res);
+            }
+
+        } catch (errors) {
+            reject(errors);
+        }
+    })
+}
+
 module.exports = {
     handleUserLogin: handleUserLogin,
     checkUserEmail: checkUserEmail,
@@ -202,4 +227,5 @@ module.exports = {
     editUser: editUser,
     updateUser: updateUser,
     deleteUser: deleteUser,
+    getAllCodeServices: getAllCodeServices,
 }

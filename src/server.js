@@ -7,7 +7,19 @@ require('dotenv').config(); // Run process.env
 var cors = require('cors');
 
 let app = express();
-app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
+// app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
+
+app.use(function(req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin', process.env.URL_REACTJS);
+
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type');
+
+    res.setHeader('Access-Control-Allow-Credentials', true);
+
+    next();
+});
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
