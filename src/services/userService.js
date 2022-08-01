@@ -11,7 +11,7 @@ let handleUserLogin = (email, password) => {
             if (isExist) {
                 //user is true, compare password
                 let user = await db.User.findOne({
-                    attributes: ['email', 'roleId', 'password'],
+                    attributes: ['email', 'roleId', 'password', 'firstName', 'lastName'],
                     where: { email: email },
                     raw: true
                 });
@@ -107,9 +107,10 @@ let createNewUser = (data) => {
                     firstName: data.firstName,
                     lastName: data.lastName,
                     address: data.address,
-                    gender: data.gender === '1' ? true : false,
+                    gender: data.gender,
                     roleId: data.roleId,
                     phonenumber: data.phonenumber,
+                    positionId: data.position,
                 });
 
                 resolve({
@@ -141,32 +142,43 @@ let editUser = (id) => {
 
 let updateUser = (data) => {
     return new Promise(async (resolve, reject) => {
-        try {
-            let user = await db.User.findOne({
-                where: { id: data.id },
-            });
-
-            if (!user) {
-                resolve({
-                    errCode: 2,
-                    message: 'User not found, update is rejected',
-                });
-            }
-
-            await db.User.update({
-                firstName: data.firstName,
-                lastName: data.lastName,
-                address: data.address,
-            }, {
-                where: { id: data.id },
-            });
-
+        if (!data.id || !data.roleId || !data.position || !data.gender) {
             resolve({
-                errCode: 0,
-                message: 'OK',
-            });
-        } catch (error) {
-            reject(error);
+                errcode: 1,
+                message: "Missing Required Parameter",
+            })
+        } else {
+            try {
+                let user = await db.User.findOne({
+                    where: { id: data.id },
+                });
+
+                if (!user) {
+                    resolve({
+                        errCode: 2,
+                        message: 'User not found, update is rejected',
+                    });
+                }
+
+                await db.User.update({
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    address: data.address,
+                    phonenumber: data.phonenumber,
+                    roleId: data.roleId,
+                    gender: data.gender,
+                    positionId: data.position,
+                }, {
+                    where: { id: data.id },
+                });
+
+                resolve({
+                    errCode: 0,
+                    message: 'OK',
+                });
+            } catch (error) {
+                reject(error);
+            }
         }
     });
 }
