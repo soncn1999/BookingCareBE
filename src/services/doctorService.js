@@ -1,4 +1,3 @@
-import e from 'express';
 import db from '../models/index';
 
 let getTopDoctorHome = (limitInput) => {
@@ -65,22 +64,52 @@ let getAllDoctors = () => {
 let saveDetailInfoDoctor = (inputData) => {
     return new Promise(async (resolve, reject) => {
         try {
-            if (!inputData.doctorId || !inputData.contentHTML || !inputData.contentMarkdown) {
+            console.log('input data: ', inputData);
+            if (!inputData.doctorId || !inputData.contentHTML || !inputData.contentMarkdown || !inputData.action) {
                 resolve({
                     errCode: 1,
                     message: 'missing required parameter'
                 })
             } else {
-                await db.Markdown.create({
-                    contentHTML: inputData.contentHTML,
-                    contentMarkdown: inputData.contentMarkdown,
-                    description: inputData.description,
-                    doctorId: inputData.doctorId
-                });
-                resolve({
-                    errCode: 0,
-                    message: 'OK',
-                })
+                if (inputData.action === 'CREATE') {
+                    let doctorCreate = await db.Markdown.create({
+                        contentHTML: inputData.contentHTML,
+                        contentMarkdown: inputData.contentMarkdown,
+                        description: inputData.description,
+                        doctorId: inputData.doctorId
+                    });
+                    if (doctorCreate) {
+                        resolve({
+                            errCode: 0,
+                            message: 'OK',
+                        })
+                    } else {
+                        resolve({
+                            errCode: 1,
+                            message: 'Something went wrong',
+                        })
+                    }
+                }
+                if (inputData.action === 'EDIT') {
+                    let doctorEdit = await db.Markdown.update({
+                        contentHTML: inputData.contentHTML,
+                        contentMarkdown: inputData.contentMarkdown,
+                        description: inputData.description,
+                        updatedAt: new Date(),
+                    }, { where: { doctorId: inputData.doctorId } })
+
+                    if (doctorEdit) {
+                        resolve({
+                            errCode: 0,
+                            message: 'OK',
+                        })
+                    } else {
+                        resolve({
+                            errCode: 1,
+                            message: 'Something went wrong',
+                        })
+                    }
+                }
             }
         } catch (errors) {
             reject(errors);
@@ -100,15 +129,21 @@ let getDetailDoctorById = (id) => {
                 let data = await db.User.findOne({
                     where: { id: id },
                     attributes: {
-                        exclude: ['password', 'image'],
+                        exclude: ['password'],
                     },
                     include: [
                         { model: db.Markdown, attributes: ['description', 'contentMarkdown', 'contentHTML'] },
                         { model: db.Allcode, as: 'positionData', attributes: ['valueEn', 'valueVi'] },
                     ],
-                    raw: true,
+                    raw: false,
                     nest: true,
                 })
+                if (data && data.image) {
+                    data.image = new Buffer(data.image, 'base64').toString('binary');
+                }
+                if (!data) {
+                    data = {}
+                }
                 resolve({
                     errCode: 0,
                     message: 'OK',
