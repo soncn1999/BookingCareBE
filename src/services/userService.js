@@ -11,7 +11,7 @@ let handleUserLogin = (email, password) => {
             if (isExist) {
                 //user is true, compare password
                 let user = await db.User.findOne({
-                    attributes: ['email', 'roleId', 'password'],
+                    attributes: ['email', 'roleId', 'password', 'firstName', 'lastName'],
                     where: { email: email },
                     raw: true
                 });
@@ -107,9 +107,11 @@ let createNewUser = (data) => {
                     firstName: data.firstName,
                     lastName: data.lastName,
                     address: data.address,
-                    gender: data.gender === '1' ? true : false,
+                    gender: data.gender,
                     roleId: data.roleId,
                     phonenumber: data.phonenumber,
+                    positionId: data.position,
+                    image: data.avatar,
                 });
 
                 resolve({
@@ -141,32 +143,44 @@ let editUser = (id) => {
 
 let updateUser = (data) => {
     return new Promise(async (resolve, reject) => {
-        try {
-            let user = await db.User.findOne({
-                where: { id: data.id },
-            });
-
-            if (!user) {
-                resolve({
-                    errCode: 2,
-                    message: 'User not found, update is rejected',
-                });
-            }
-
-            await db.User.update({
-                firstName: data.firstName,
-                lastName: data.lastName,
-                address: data.address,
-            }, {
-                where: { id: data.id },
-            });
-
+        if (!data.id || !data.roleId || !data.position || !data.gender) {
             resolve({
-                errCode: 0,
-                message: 'OK',
-            });
-        } catch (error) {
-            reject(error);
+                errcode: 1,
+                message: "Missing Required Parameter",
+            })
+        } else {
+            try {
+                let user = await db.User.findOne({
+                    where: { id: data.id },
+                });
+
+                if (!user) {
+                    resolve({
+                        errCode: 2,
+                        message: 'User not found, update is rejected',
+                    });
+                }
+
+                await db.User.update({
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    address: data.address,
+                    phonenumber: data.phonenumber,
+                    roleId: data.roleId,
+                    gender: data.gender,
+                    positionId: data.position,
+                    image: data.avatar,
+                }, {
+                    where: { id: data.id },
+                });
+
+                resolve({
+                    errCode: 0,
+                    message: 'OK',
+                });
+            } catch (error) {
+                reject(error);
+            }
         }
     });
 }
@@ -194,6 +208,31 @@ let deleteUser = (id) => {
     });
 };
 
+let getAllCodeServices = (typeInput) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (!typeInput) {
+                resolve({
+                    errCode: 1,
+                    message: 'Missing Require Parameter',
+                });
+            } else {
+                let res = {};
+                let allCodes = await db.Allcode.findAll(
+                    { where: { type: typeInput } }
+                );
+                res.errCode = 0;
+                res.message = 'OK';
+                res.data = allCodes;
+                resolve(res);
+            }
+
+        } catch (errors) {
+            reject(errors);
+        }
+    })
+}
+
 module.exports = {
     handleUserLogin: handleUserLogin,
     checkUserEmail: checkUserEmail,
@@ -202,4 +241,5 @@ module.exports = {
     editUser: editUser,
     updateUser: updateUser,
     deleteUser: deleteUser,
+    getAllCodeServices: getAllCodeServices,
 }
