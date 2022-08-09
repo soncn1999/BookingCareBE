@@ -1,4 +1,8 @@
 import db from '../models/index';
+require('dotenv').config();
+import _ from 'lodash';
+
+const MAX_NUMBER_SCHEDULE = process.env.MAX_NUMBER_SCHEDULE;
 
 let getTopDoctorHome = (limitInput) => {
     return new Promise(async (resolve, reject) => {
@@ -156,9 +160,70 @@ let getDetailDoctorById = (id) => {
     })
 }
 
+let handleBulkCreateShedule = (data) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let schedule = data.arrSchedule;
+            if (schedule && schedule.length > 0 && data.doctorId && data.formatedDate) {
+                schedule.map(item => {
+                    item.maxNumber = MAX_NUMBER_SCHEDULE;
+                    item.date = new Date(item.date);
+                    return item;
+                });
+
+                let existing = await db.Schedule.findAll({
+                    where: { doctorId: data.doctorId, date: new Date(data.formatedDate) },
+                    attributes: ['timeType', 'date', 'doctorId', 'maxNumber'],
+                });
+
+                // if (existing && existing.length > 0) {
+                //     existing = existing.map(item => {
+                //         item.date = new Date(item.date).getTime();
+                //         return item;
+                //     })
+                // }
+
+                // console.log('3 ================== Existing 2 converted date: ', existing);
+
+                let toCreate = _.differenceWith(schedule, existing, (a, b) => {
+                    return a.timeType === b.timeType;
+                });
+
+                if (toCreate && toCreate.length > 0) {
+                    let response = await db.Schedule.bulkCreate(toCreate);
+                    if (response) {
+                        resolve({
+                            errCode: 0,
+                            message: 'OK'
+                        });
+                    } else {
+                        resolve({
+                            errCode: 2,
+                            message: 'Can not create schedule data'
+                        });
+                    }
+                } else {
+                    resolve({
+                        errCode: 3,
+                        message: 'Something went wrong'
+                    });
+                }
+            } else {
+                resolve({
+                    errCode: 1,
+                    message: 'Missing required parameter',
+                })
+            }
+        } catch (errors) {
+            reject(errors);
+        }
+    });
+}
+
 module.exports = {
     getTopDoctorHome: getTopDoctorHome,
     getAllDoctors: getAllDoctors,
     saveDetailInfoDoctor: saveDetailInfoDoctor,
     getDetailDoctorById: getDetailDoctorById,
+    handleBulkCreateShedule: handleBulkCreateShedule
 }
