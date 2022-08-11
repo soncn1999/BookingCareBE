@@ -34,7 +34,6 @@ let getAllDoctors = async (req, res) => {
 }
 
 let postInfoDoctor = async (req, res) => {
-    console.log(req.body);
     try {
         let response = await doctorService.saveDetailInfoDoctor(req.body);
         return res.status(200).json(response)
@@ -73,10 +72,16 @@ let bulkCreateShedule = async (req, res) => {
     }
 }
 
+let getScheduleDoctorByDate = async (req, res) => {
+    let info = await doctorService.getScheduleDoctorByDate(req.query.doctorId, req.query.date);
+    return res.status(200).json(info);
+}
+
 module.exports = {
     getTopDoctorHome: getTopDoctorHome,
     getAllDoctors: getAllDoctors,
     postInfoDoctor: postInfoDoctor,
     getDetailDoctorById: getDetailDoctorById,
-    bulkCreateShedule: bulkCreateShedule
+    bulkCreateShedule: bulkCreateShedule,
+    getScheduleDoctorByDate: getScheduleDoctorByDate,
 }
