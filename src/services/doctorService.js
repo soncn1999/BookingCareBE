@@ -167,26 +167,16 @@ let handleBulkCreateShedule = (data) => {
             if (schedule && schedule.length > 0 && data.doctorId && data.formatedDate) {
                 schedule.map(item => {
                     item.maxNumber = MAX_NUMBER_SCHEDULE;
-                    item.date = new Date(item.date);
                     return item;
                 });
 
                 let existing = await db.Schedule.findAll({
-                    where: { doctorId: data.doctorId, date: new Date(data.formatedDate) },
+                    where: { doctorId: data.doctorId, date: data.formatedDate },
                     attributes: ['timeType', 'date', 'doctorId', 'maxNumber'],
                 });
 
-                // if (existing && existing.length > 0) {
-                //     existing = existing.map(item => {
-                //         item.date = new Date(item.date).getTime();
-                //         return item;
-                //     })
-                // }
-
-                // console.log('3 ================== Existing 2 converted date: ', existing);
-
                 let toCreate = _.differenceWith(schedule, existing, (a, b) => {
-                    return a.timeType === b.timeType;
+                    return a.timeType === b.timeType && +a.date === +b.date;
                 });
 
                 if (toCreate && toCreate.length > 0) {
@@ -220,10 +210,50 @@ let handleBulkCreateShedule = (data) => {
     });
 }
 
+let getScheduleDoctorByDate = (doctorId, date) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            if (doctorId && date) {
+                let data = await db.Schedule.findAll({
+                    where: {
+                        doctorId: doctorId,
+                        date: date
+                    },
+                    include: [
+                        { model: db.Allcode, as: 'timeTypeData', attributes: ['valueEn', 'valueVi'] },
+                    ],
+                    raw: true,
+                    nest: true,
+                });
+
+                if (data.length > 0) {
+                    resolve({
+                        errCode: 0,
+                        message: 'OK',
+                        data: data
+                    })
+                } else {
+                    resolve({
+                        errCode: 2,
+                        message: 'can not find schedule! try again',
+                    })
+                }
+            } else {
+                resolve({
+                    errCode: 1,
+                    message: 'Missing required parameter',
+                })
+            }
+        } catch (errors) {
+            reject(errors);
+        }
+    })
+}
 module.exports = {
     getTopDoctorHome: getTopDoctorHome,
     getAllDoctors: getAllDoctors,
     saveDetailInfoDoctor: saveDetailInfoDoctor,
     getDetailDoctorById: getDetailDoctorById,
-    handleBulkCreateShedule: handleBulkCreateShedule
+    handleBulkCreateShedule: handleBulkCreateShedule,
+    getScheduleDoctorByDate: getScheduleDoctorByDate,
 }
