@@ -67,30 +67,28 @@ let getAllDoctors = () => {
 
 let saveDetailInfoDoctor = (inputData) => {
     return new Promise(async (resolve, reject) => {
+
         try {
-            if (!inputData.doctorId || !inputData.contentHTML || !inputData.contentMarkdown || !inputData.action) {
+            if (!inputData.doctorId || !inputData.contentHTML || !inputData.contentMarkdown || !inputData.action
+                || !inputData.priceId || !inputData.provinceId || !inputData.paymentId || !inputData.addressClinic
+                || !inputData.nameClinic || !inputData.note) {
                 resolve({
                     errCode: 1,
                     message: 'missing required parameter'
-                })
+                });
             } else {
                 if (inputData.action === 'CREATE') {
                     let doctorCreate = await db.Markdown.create({
                         contentHTML: inputData.contentHTML,
                         contentMarkdown: inputData.contentMarkdown,
                         description: inputData.description,
-                        doctorId: inputData.doctorId
+                        doctorId: inputData.doctorId,
                     });
-                    if (doctorCreate) {
-                        resolve({
-                            errCode: 0,
-                            message: 'OK',
-                        })
-                    } else {
+                    if (!doctorCreate) {
                         resolve({
                             errCode: 1,
                             message: 'Something went wrong',
-                        })
+                        });
                     }
                 }
                 if (inputData.action === 'EDIT') {
@@ -101,18 +99,59 @@ let saveDetailInfoDoctor = (inputData) => {
                         updatedAt: new Date(),
                     }, { where: { doctorId: inputData.doctorId } })
 
-                    if (doctorEdit) {
-                        resolve({
-                            errCode: 0,
-                            message: 'OK',
-                        })
-                    } else {
+                    if (!doctorEdit) {
                         resolve({
                             errCode: 1,
                             message: 'Something went wrong',
                         })
                     }
                 }
+
+                let doctorInfo = await db.Doctor_Info.findOne({
+                    where: {
+                        doctorId: inputData.doctorId,
+                    },
+                    raw: false,
+                });
+
+                if (doctorInfo) {
+                    doctorInfo.doctorId = inputData.doctorId;
+                    doctorInfo.priceId = inputData.priceId;
+                    doctorInfo.provinceId = inputData.provinceId;
+                    doctorInfo.paymentId = inputData.paymentId;
+                    doctorInfo.addressClinic = inputData.addressClinic;
+                    doctorInfo.nameClinic = inputData.nameClinic;
+                    doctorInfo.note = inputData.note;
+                    let response = await doctorInfo.save();
+                    if (!response) {
+                        reject({
+                            errCode: 1,
+                            message: 'Something went wrong, Update Failed!',
+                        })
+                    }
+                } else {
+                    let response = await db.Doctor_Info.create({
+                        doctorId: inputData.doctorId,
+                        priceId: inputData.priceId,
+                        provinceId: inputData.provinceId,
+                        paymentId: inputData.paymentId,
+                        addressClinic: inputData.addressClinic,
+                        nameClinic: inputData.nameClinic,
+                        note: inputData.note,
+                    });
+
+                    if (!response) {
+                        reject({
+                            errCode: 1,
+                            message: 'Something went wrong, Create Failed!',
+                        })
+                    }
+                }
+
+                resolve({
+                    errCode: 0,
+                    message: 'OK',
+                })
             }
         } catch (errors) {
             reject(errors);
@@ -137,10 +176,22 @@ let getDetailDoctorById = (id) => {
                     include: [
                         { model: db.Markdown, attributes: ['description', 'contentMarkdown', 'contentHTML'] },
                         { model: db.Allcode, as: 'positionData', attributes: ['valueEn', 'valueVi'] },
+                        { model: db.Doctor_Info, as: 'doctorData', attributes: ['priceId', 'provinceId', 'paymentId', 'addressClinic', 'nameClinic', 'note'] },
+                        // {
+                        //     model: db.Doctor_Info, as: 'doctorData',
+                        //     attributes: {
+                        //         exclude: ['id', 'doctorId'],
+                        //     },
+                        //     include: [
+                        //         { model: db.Allcode, as: 'priceTypeData', attributes: ['valueEn', 'valueVi'] },
+                        //         { model: db.Allcode, as: 'paymentTypeData', attributes: ['valueEn', 'valueVi'] },
+                        //         { model: db.Allcode, as: 'provinceTypeData', attributes: ['valueEn', 'valueVi'] },
+                        //     ]
+                        // }
                     ],
                     raw: false,
                     nest: true,
-                })
+                });
                 if (data && data.image) {
                     data.image = new Buffer(data.image, 'base64').toString('binary');
                 }
@@ -248,6 +299,43 @@ let getScheduleDoctorByDate = (doctorId, date) => {
         }
     })
 }
+
+let handleGetExtraInfoDoctorById = (id) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let response = await db.Doctor_Info.findOne({
+                where: {
+                    doctorId: id
+                },
+                attributes: {
+                    exclude: ['id', 'doctorId'],
+                },
+                include: [
+                    { model: db.Allcode, as: 'priceTypeData', attributes: ['valueEn', 'valueVi'] },
+                    { model: db.Allcode, as: 'paymentTypeData', attributes: ['valueEn', 'valueVi'] },
+                    { model: db.Allcode, as: 'provinceTypeData', attributes: ['valueEn', 'valueVi'] },
+                ],
+                raw: true,
+                nest: true,
+            });
+            if (response) {
+                resolve({
+                    errCode: 0,
+                    message: 'OK',
+                    data: response,
+                });
+            } else {
+                resolve({
+                    errCode: 1,
+                    message: 'Missing required parameter',
+                })
+            }
+        } catch (errors) {
+            reject(errors);
+        }
+    });
+}
+
 module.exports = {
     getTopDoctorHome: getTopDoctorHome,
     getAllDoctors: getAllDoctors,
@@ -255,4 +343,5 @@ module.exports = {
     getDetailDoctorById: getDetailDoctorById,
     handleBulkCreateShedule: handleBulkCreateShedule,
     getScheduleDoctorByDate: getScheduleDoctorByDate,
+    handleGetExtraInfoDoctorById: handleGetExtraInfoDoctorById,
 }
