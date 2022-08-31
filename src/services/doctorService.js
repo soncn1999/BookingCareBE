@@ -336,6 +336,49 @@ let handleGetExtraInfoDoctorById = (id) => {
     });
 }
 
+let handleGetProfileDoctorById = (id) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let data = await db.User.findOne({
+                where: { id: id },
+                attributes: {
+                    exclude: ['password'],
+                },
+                include: [
+                    { model: db.Allcode, as: 'positionData', attributes: ['valueEn', 'valueVi'] },
+                    { model: db.Markdown, attributes: ['description', 'contentMarkdown', 'contentHTML'] },
+                    {
+                        model: db.Doctor_Info, as: 'doctorData',
+                        attributes: {
+                            exclude: ['id', 'doctorId'],
+                        },
+                        include: [
+                            { model: db.Allcode, as: 'priceTypeData', attributes: ['valueEn', 'valueVi'] },
+                            { model: db.Allcode, as: 'paymentTypeData', attributes: ['valueEn', 'valueVi'] },
+                            { model: db.Allcode, as: 'provinceTypeData', attributes: ['valueEn', 'valueVi'] },
+                        ]
+                    }
+                ],
+                raw: false,
+                nest: true,
+            });
+            if (data && data.image) {
+                data.image = new Buffer(data.image, 'base64').toString('binary');
+            }
+            if (!data) {
+                data = {}
+            }
+            resolve({
+                errCode: 0,
+                message: 'OK',
+                data: data,
+            })
+        } catch (errors) {
+            reject(errors);
+        }
+    });
+}
+
 module.exports = {
     getTopDoctorHome: getTopDoctorHome,
     getAllDoctors: getAllDoctors,
@@ -344,4 +387,5 @@ module.exports = {
     handleBulkCreateShedule: handleBulkCreateShedule,
     getScheduleDoctorByDate: getScheduleDoctorByDate,
     handleGetExtraInfoDoctorById: handleGetExtraInfoDoctorById,
+    handleGetProfileDoctorById: handleGetProfileDoctorById,
 }
