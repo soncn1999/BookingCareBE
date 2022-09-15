@@ -13,16 +13,6 @@ let handlePostBookAppointment = (data) => {
     return new Promise(async (resolve, reject) => {
         try {
             if (data && data.email && data.doctorId && data.timeType && data.date && data.fullname) {
-                let token = uuidv4();
-                await emailService.sendSimpleEmail({
-                    receiverEmail: data.email,
-                    patientName: data.fullname,
-                    time: data.timeTypeData,
-                    doctorName: data.doctorFullname,
-                    redirectLink: buildUrlEmail(data.doctorId, token),
-                    language: data.language,
-                    bookingTime: data.bookingTime,
-                });
 
                 let user = await db.User.findOrCreate({
                     where: { email: data.email },
@@ -31,21 +21,35 @@ let handlePostBookAppointment = (data) => {
                         roleId: 'R3',
                     }
                 });
+                let isCheckDuplicateBookingShiftResult = await isCheckDuplicateBookingShift(data, user[0].id);
+                let isCurrentExaminationShiftResult = await isCurrentExaminationShift(data);
 
-                if (user && user[0] && token) {
-                    await db.Booking.findOrCreate({
-                        where: {
-                            patientId: user[0].id,
-                        },
-                        defaults: {
-                            statusId: 'S1',
-                            patientId: user[0].id,
-                            doctorId: data.doctorId,
-                            date: data.date,
-                            timeType: data.timeType,
-                            token: token,
-                        }
+                if (user && user[0] && isCurrentExaminationShiftResult && isCheckDuplicateBookingShiftResult) {
+                    let token = uuidv4();
+
+                    await db.Booking.create({
+                        statusId: 'S1',
+                        patientId: user[0].id,
+                        doctorId: data.doctorId,
+                        date: data.date,
+                        timeType: data.timeType,
+                        token: token,
                     });
+
+                    await emailService.sendSimpleEmail({
+                        receiverEmail: data.email,
+                        patientName: data.fullname,
+                        time: data.timeTypeData,
+                        doctorName: data.doctorFullname,
+                        redirectLink: buildUrlEmail(data.doctorId, token),
+                        language: data.language,
+                        bookingTime: data.bookingTime,
+                    });
+                } else {
+                    resolve({
+                        errCode: 2,
+                        message: 'This appointment is existing. Please book an new appointment'
+                    })
                 }
 
                 resolve({
@@ -87,7 +91,9 @@ let handlePostVerifyBookAppointment = (data) => {
                     resolve({
                         errCode: 0,
                         message: 'OK',
-                    })
+                    });
+
+                    await setCurrentExaminationShift(data);
                 } else {
                     resolve({
                         errCode: 2,
@@ -104,6 +110,63 @@ let handlePostVerifyBookAppointment = (data) => {
             reject(errors);
         }
     });
+}
+
+let isCheckDuplicateBookingShift = async (data, patientId) => {
+    let result = true;
+    let response = await db.Booking.findOne({
+        where: {
+            patientId: patientId,
+            date: data.date,
+            timeType: data.timeType,
+        }
+    });
+    if (response) {
+        result = false;
+    }
+    return result;
+}
+
+let setCurrentExaminationShift = async (data) => {
+    let searchingBookingParam = await db.Booking.findOne({
+        where: {
+            token: data.token,
+            doctorId: data.doctorId,
+        }
+    });
+    if (searchingBookingParam) {
+        let currentExamination = await db.Schedule.findOne({
+            where: {
+                date: searchingBookingParam.date,
+                timeType: searchingBookingParam.timeType,
+                doctorId: searchingBookingParam.doctorId,
+            }
+        })
+        if (currentExamination) {
+            await db.Schedule.update({
+                currentNumber: +currentExamination.currentNumber + 1,
+            }, {
+                where: {
+                    id: currentExamination.id,
+                }
+            });
+        }
+    }
+}
+
+let isCurrentExaminationShift = async (data) => {
+    let result = false;
+    let response = await db.Schedule.findOne({
+        where: {
+            date: data.date,
+            timeType: data.timeType,
+            doctorId: data.doctorId,
+        }
+    });
+    if (response && response.currentNumber < response.maxNumber) {
+        result = true;
+    }
+    return result;
 }
 
 module.exports = {
